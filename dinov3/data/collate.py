@@ -163,6 +163,17 @@ def collate_data_and_cast(
 
     masks_weight = (1 / collated_masks.sum(-1).clamp(min=1.0)).unsqueeze(-1).expand_as(collated_masks)[collated_masks]
 
+    if "seg_global_crops" in samples_list[0][0]:
+        collated_seg_global_crops = torch.stack(
+            [s[0]["seg_global_crops"][i] for i in range(n_global_crops) for s in samples_list]
+        )
+        collated_seg_local_crops = torch.stack(
+            [s[0]["seg_local_crops"][i] for i in range(n_local_crops) for s in samples_list]
+        )
+    else:
+        collated_seg_global_crops = None
+        collated_seg_local_crops = None
+        
     out = {
         "collated_global_crops": collated_global_crops.to(dtype),
         "collated_local_crops": collated_local_crops.to(dtype),
@@ -175,6 +186,9 @@ def collate_data_and_cast(
     }
     if collated_gram_teacher_crops is not None:
         out["collated_gram_teacher_crops"] = collated_gram_teacher_crops.to(dtype)
+    if collated_seg_global_crops is not None:
+        out["collated_seg_global_crops"] = collated_seg_global_crops.to(dtype)
+        out["collated_seg_local_crops"]  = collated_seg_local_crops.to(dtype)
     return out
 
 

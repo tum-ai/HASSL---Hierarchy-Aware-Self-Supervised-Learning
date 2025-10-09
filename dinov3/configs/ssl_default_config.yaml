@@ -202,7 +202,10 @@ checkpointing:
   max_to_keep: 3
   keep_every: 99999999999999999  # Save a checkpoint every N iterations, regardless of max_to_keep and period
   checkpointing_goal_epoch: 80
-
+#for the new segmentation teacher student loss
+seg:
+  enabled: true
+  loss_weight: 0.2   
 
 # Example of constant schedules with schedules v2
 # # schedules:

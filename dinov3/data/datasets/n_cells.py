@@ -139,7 +139,17 @@ def _derive_label_from_path(img_path: str, root: Path, split: str, origin: str) 
     label_parts = pre + post
     return "__".join(label_parts) if label_parts else ""
 
-
+def _load_mask_for_row(mask_dir: str, stem: str) -> Optional[np.ndarray]:
+    """Try common filenames for a binary mask .npy; return HxW uint8 array or None."""
+    for p in _mask_guess_paths(Path(mask_dir), stem):
+        if p.exists():
+            m = np.load(str(p), allow_pickle=False)
+            if m.ndim > 2:
+                m = np.squeeze(m)
+            # ensure binary {0,1} uint8
+            m = (m > 0).astype("uint8")
+            return m
+    return None
 # ------------------------- 1) MANIFEST BUILDER (guaranteed labels) -------------------------
 
 def build_manifest_csv(
@@ -340,5 +350,31 @@ class NCells(ExtendedVisionDataset):
             label = self._rows[index][1]
         return label
 
+    def get_segmentation_mask_of_image(self, index: int) -> Image.Image:
+        """
+        Returns the mask as a PIL Image (3-channel, uint8, same shape as get_image_data).
+        """
+        img_path, origin, label, mask_dir, has_empty, stem, h, w, area = self._rows[index]
+        m = _load_mask_for_row(mask_dir, stem)
+        if m is None:
+            m = np.zeros((h, w), dtype="uint8")
+        if m.shape != (h, w):
+            m = np.array(Image.fromarray(m, mode="L").resize((w, h), Image.NEAREST), dtype="uint8")
+        arr = np.stack([m, m, m], axis=-1).astype("uint8")  # 3-channel
+        arr *= 255
+        return Image.fromarray(arr)
+
+    def __getitem__(self, index: int):
+        img = self.get_image_data(index)                   # PIL Image (RGB)
+        seg = self.get_segmentation_mask_of_image(index)   # PIL Image (3-ch uint8 mask)
+        target = self.get_target(index)
+
+        if self.transform is not None:
+            # IMPORTANT: pass (img, seg) together so augmentation can do paired crops
+            img = self.transform((img, seg))
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        return img, target
+    
     def __len__(self) -> int:
         return len(self._rows)

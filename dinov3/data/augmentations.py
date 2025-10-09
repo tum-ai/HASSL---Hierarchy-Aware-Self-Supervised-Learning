@@ -8,6 +8,7 @@ import logging
 import numpy as np
 from torch import nn
 from torchvision import transforms
+from torchvision.transforms import functional as F
 
 from dinov3.data.transforms import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, GaussianBlur, make_normalize_transform
 
@@ -160,36 +161,72 @@ class DataAugmentationDINO(object):
                 [resize_global, color_jittering, global_transfo2_extra, self.normalize]
             )
             self.local_transfo = transforms.Compose([color_jittering, local_transfo_extra, self.normalize])
+            
+    def _paired_global_crop(self, pil_img, pil_seg):
+        # sample params once and apply to both
+        i, j, h, w = transforms.RandomResizedCrop.get_params(
+            pil_img, scale=self.global_crops_scale, ratio=(3/4, 4/3)
+        )
+        crop_img = F.resized_crop(pil_img, i, j, h, w, (max(self.global_crops_size, self.gram_teacher_crops_size or 0),
+                                                        max(self.global_crops_size, self.gram_teacher_crops_size or 0)),
+                                  transforms.InterpolationMode.BICUBIC)
+        crop_seg = F.resized_crop(pil_seg, i, j, h, w, (max(self.global_crops_size, self.gram_teacher_crops_size or 0),
+                                                        max(self.global_crops_size, self.gram_teacher_crops_size or 0)),
+                                  transforms.InterpolationMode.NEAREST)
+
+        if self.geometric_augmentation_global.transforms[-1].p > 0:  # horizontal flip in your pipeline
+            # Re-apply the *same* randomness: flip or not flip together
+            do_flip = np.random.rand() < (0.5 if hasattr(self, "horizontal_flips") else 0.5)
+            if do_flip:
+                crop_img = F.hflip(crop_img)
+                crop_seg = F.hflip(crop_seg)
+        return crop_img, crop_seg
+
+    def _paired_local_crop(self, pil_img, pil_seg):
+        i, j, h, w = transforms.RandomResizedCrop.get_params(
+            pil_img, scale=self.local_crops_scale, ratio=(3/4, 4/3)
+        )
+        crop_img = F.resized_crop(pil_img, i, j, h, w, (self.local_crops_size, self.local_crops_size),
+                                  transforms.InterpolationMode.BICUBIC)
+        crop_seg = F.resized_crop(pil_seg, i, j, h, w, (self.local_crops_size, self.local_crops_size),
+                                  transforms.InterpolationMode.NEAREST)
+        if self.geometric_augmentation_local.transforms[-1].p > 0:
+            do_flip = np.random.rand() < (0.5 if hasattr(self, "horizontal_flips") else 0.5)
+            if do_flip:
+                crop_img = F.hflip(crop_img)
+                crop_seg = F.hflip(crop_seg)
+        return crop_img, crop_seg
 
     def __call__(self, image):
+        # Accept either PIL image, or tuple (img, seg)
+        if isinstance(image, (tuple, list)):
+            pil_img, pil_seg = image
+        else:
+            pil_img, pil_seg = image, None
+
         output = {}
         output["weak_flag"] = True  # some residual from mugs
 
-        if self.share_color_jitter:
-            image = self.color_jittering(image)
-
-        # global crops:
-        im1_base = self.geometric_augmentation_global(image)
-        global_crop_1_transf = self.global_transfo1(im1_base)
-        global_crop_1 = self.resize_global_post_transf(global_crop_1_transf)
-
-        im2_base = self.geometric_augmentation_global(image)
-        global_crop_2_transf = self.global_transfo2(im2_base)
-        global_crop_2 = self.resize_global_post_transf(global_crop_2_transf)
-
-        output["global_crops"] = [global_crop_1, global_crop_2]
-
-        # global crops for teacher:
-        if self.teacher_no_color_jitter:
-            output["global_crops_teacher"] = [
-                self.normalize(im1_base),
-                self.normalize(im2_base),
-            ]
+        # --- GLOBAL crops (two views) ---
+        if pil_seg is not None:
+            im1_base, seg1_base = self._paired_global_crop(pil_img, pil_seg)
+            im2_base, seg2_base = self._paired_global_crop(pil_img, pil_seg)
         else:
-            output["global_crops_teacher"] = [global_crop_1, global_crop_2]
+            im1_base = self.geometric_augmentation_global(pil_img)
+            im2_base = self.geometric_augmentation_global(pil_img)
+            seg1_base = seg2_base = None
 
+        # image branch post-transforms (same as your code)
+        global_crop_1_transf = self.global_transfo1(im1_base if pil_seg is None else im1_base)
+        global_crop_2_transf = self.global_transfo2(im2_base if pil_seg is None else im2_base)
+        global_crop_1 = self.resize_global_post_transf(global_crop_1_transf)
+        global_crop_2 = self.resize_global_post_transf(global_crop_2_transf)
+        output["global_crops"] = [global_crop_1, global_crop_2]
+        output["global_crops_teacher"] = [self.normalize(im1_base), self.normalize(im2_base)] \
+            if self.teacher_no_color_jitter else [global_crop_1, global_crop_2]
+
+        # GRAM teacher as before...
         if self.gram_teacher_crops_size is not None:
-            # crops for gram teacher:
             if self.gram_teacher_no_distortions:
                 gram_crop_1 = self.normalize(self.resize_gram_teacher(im1_base))
                 gram_crop_2 = self.normalize(self.resize_gram_teacher(im2_base))
@@ -198,29 +235,22 @@ class DataAugmentationDINO(object):
                 gram_crop_2 = self.resize_gram_teacher(global_crop_2_transf)
             output["gram_teacher_crops"] = [gram_crop_1, gram_crop_2]
 
-        # local crops:
-        if self.local_crops_subset_of_global_crops:
-            _local_crops = [self.local_transfo(im1_base) for _ in range(self.local_crops_number // 2)] + [
-                self.local_transfo(im2_base) for _ in range(self.local_crops_number // 2)
-            ]
+        # --- LOCAL crops (image) ---
+        local_crops_img = [self.local_transfo(self.geometric_augmentation_local(pil_img))
+                           for _ in range(self.local_crops_number)]
+        output["local_crops"] = local_crops_img
+        output["offsets"] = ()
 
-            local_crops = []
-            offsets = []
-            gs = self.global_crops_size
-            ls = self.local_crops_size
-            for img in _local_crops:
-                rx, ry = np.random.randint(0, (gs - ls) // self.patch_size, 2) * self.patch_size
-                local_crops.append(img[:, rx : rx + ls, ry : ry + ls])
-                offsets.append((rx, ry))
+        # --- Segmentation crops (paired & no color jitter) ---
+        if pil_seg is not None:
+            seg_global_1 = self.normalize(seg1_base)
+            seg_global_2 = self.normalize(seg2_base)
+            output["seg_global_crops"] = [seg_global_1, seg_global_2]
 
-            output["local_crops"] = local_crops
-            output["offsets"] = offsets
-            output["image"] = self.normalize(image)
-        else:
-            local_crops = [
-                self.local_transfo(self.geometric_augmentation_local(image)) for _ in range(self.local_crops_number)
-            ]
-            output["local_crops"] = local_crops
-            output["offsets"] = ()
-            output["image"] = self.normalize(image)
+            seg_local_crops = []
+            for _ in range(self.local_crops_number):
+                _, seg_loc = self._paired_local_crop(pil_img, pil_seg)
+                seg_local_crops.append(self.normalize(seg_loc))
+            output["seg_local_crops"] = seg_local_crops
+            
         return output

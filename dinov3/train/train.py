@@ -491,8 +491,8 @@ def do_train(cfg, model, resume=False):
     )
     # Setup wandb
     with wandb.init(
-        entity="julius-riel-tum-ai",
-        project="ssl-embedding",
+        entity="anirudh027-ludwig-maximilianuniversity-of-munich",
+        project="dinov3-double-teacher",
         tags=["dinov3", "finetuning", "hdbscan", "neglambdas-10"]
     ) as run:
         # Metric logging

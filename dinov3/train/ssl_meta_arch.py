@@ -418,6 +418,62 @@ class SSLMetaArch(nn.Module):
             mask_indices_list=mask_indices_list,
         )
 
+        # Adding teacher and student for segmentation crops
+        seg_extra_loss = 0.0
+        if getattr(self.cfg, "seg", None) and self.cfg.seg.enabled and "collated_seg_global_crops" in data:
+            n_global_crops = 2
+            B = data["collated_global_crops"].shape[0] // n_global_crops
+
+            seg_global = data["collated_seg_global_crops"].cuda(non_blocking=True)
+            seg_local  = data["collated_seg_local_crops"].cuda(non_blocking=True)
+
+            # Teacher on segmentation crops
+            seg_teacher_global = self.get_teacher_output(
+                seg_global.unflatten(0, (n_global_crops, B)),
+                teacher_temp=teacher_temp,
+                n_masked_patches_tensor=n_masked_patches_tensor,
+                mask_indices_list=mask_indices_list,
+                upperbound=data["upperbound"],
+            )
+
+            # Student on segmentation crops
+            seg_student_global, seg_student_local = self.get_student_output(
+                global_crops=seg_global.unflatten(0, (n_global_crops, B)),
+                local_crops=seg_local.unflatten(0, (self.n_local_crops, B)),
+                upperbound=data["upperbound"],
+                masks=masks,
+                mask_indices_list=mask_indices_list,
+            )
+            # scales (reuse the ones already computed below or rederive quickly)
+            dino_global_terms = n_global_crops * (n_global_crops - 1) if self.dino_global_ignore_diagonal else n_global_crops**2
+            dino_local_terms  = n_global_crops * self.n_local_crops
+            dino_global_scale = dino_global_terms / (dino_global_terms + dino_local_terms)
+            dino_local_scale  = dino_local_terms  / (dino_global_terms + dino_local_terms)
+
+            # (1) Seg -> Seg (student seg vs teacher seg)
+            seg2seg_local  = self.dino_loss(seg_student_local["cls_after_head"], seg_teacher_global["cls_centered"])
+            seg2seg_global = self.dino_loss(seg_student_global["cls_after_head"], seg_teacher_global["cls_centered"],
+                                            ignore_diagonal=self.dino_global_ignore_diagonal)
+            seg2seg = dino_local_scale * seg2seg_local + dino_global_scale * seg2seg_global
+
+            # (2) Seg -> Image (student image vs teacher seg)
+            seg2img_local  = self.dino_loss(student_local["cls_after_head"], seg_teacher_global["cls_centered"])
+            seg2img_global = self.dino_loss(student_global["cls_after_head"], seg_teacher_global["cls_centered"],
+                                            ignore_diagonal=self.dino_global_ignore_diagonal)
+            seg2img = dino_local_scale * seg2img_local + dino_global_scale * seg2img_global
+
+            # accumulate (weighted)
+            # w = float(self.cfg.seg.loss_weight)
+            w = min(0.2, (iteration / 125000) * 0.2)
+            seg_extra_loss = w * (seg2seg + seg2img)
+
+            # # log for visibility
+            # loss_dict["seg/seg2seg_local"]  = seg2seg_local
+            # loss_dict["seg/seg2seg_global"] = seg2seg_global
+            # loss_dict["seg/seg2img_local"]  = seg2img_local
+            # loss_dict["seg/seg2img_global"] = seg2img_global
+            # loss_dict["seg/weighted_extra"] = seg_extra_loss   
+      
         # Gram output
         if self.gram_use_loss:
             gram_global = self.get_gram_teacher_output(
@@ -467,6 +523,18 @@ class SSLMetaArch(nn.Module):
             clustering_gloabal=clustering_gloabal,
         )
 
+        if getattr(self.cfg, "seg", None) and self.cfg.seg.enabled and "collated_seg_global_crops" in data:
+                        # log for visibility
+            loss_dict["seg2seg_loss"] = seg2seg * 0.1
+            loss_dict["seg2img_loss"] = seg2img * 0.1
+            loss_dict["seg/seg2seg_local"]  = seg2seg_local
+            loss_dict["seg/seg2seg_global"] = seg2seg_global
+            loss_dict["seg/seg2img_local"]  = seg2img_local
+            loss_dict["seg/seg2img_global"] = seg2img_global
+            loss_dict["seg/weighted_extra"] = seg_extra_loss 
+            
+        loss_accumulator = loss_accumulator + seg_extra_loss
+        
         self.backprop_loss(loss_accumulator)
 
         # Return total weighted loss, a dict of metrics to log and the los dict

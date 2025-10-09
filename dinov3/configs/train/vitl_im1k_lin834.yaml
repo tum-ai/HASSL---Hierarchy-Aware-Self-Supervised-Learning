@@ -160,3 +160,7 @@ checkpointing:
   period: 3750
   max_to_keep: 3
   checkpointing_goal_epoch: 80
+#for the new segmentation teacher student loss
+seg:
+  enabled: true
+  loss_weight: 0.2   
