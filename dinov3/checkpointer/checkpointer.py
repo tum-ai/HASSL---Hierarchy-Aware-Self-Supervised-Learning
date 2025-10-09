@@ -235,12 +235,20 @@ def find_latest_checkpoint(ckpt_dir: Path | str) -> Path | None:
     return checkpoints[-1]
 
 
-def keep_last_n_checkpoints(ckpt_dir: Path | str, n: int | None):
+def keep_last_n_checkpoints(ckpt_dir: Path | str, n: int | None, goal_iter: int = -1):
     """In a directory with integer-named subdirs, keep only the n subdirs with the highest number."""
     if n is None:
         return
     checkpoints = find_all_checkpoints(ckpt_dir)
     for ckpt_dir in checkpoints[:-n]:
+        # Don't delete goal checkpoint
+        try:
+            iter_num = int(Path(ckpt_dir).name)
+        except ValueError:
+            continue
+        if goal_iter > -1 and iter_num == goal_iter:
+            logger.info(f"Skipping deletion of checkpoint {ckpt_dir} (goal_iter).")
+            continue
         try:
             shutil.rmtree(ckpt_dir)
             logger.info(f"Deleted: {ckpt_dir}")

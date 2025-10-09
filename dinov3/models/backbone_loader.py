@@ -27,7 +27,7 @@ def load_backbone(
         shard_unsharded_model=False,
         output_dir=output_dir,
     )
-    cfg = get_cfg_from_args(args)
+    cfg = get_cfg_from_args(args, strict=False)
     apply_scaling_rules_to_cfg(cfg)
     model = SSLMetaArch(cfg)
     print("Materializing model parameters on", DEVICE)

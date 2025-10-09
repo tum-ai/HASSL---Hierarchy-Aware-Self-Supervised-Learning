@@ -4,8 +4,101 @@
 # the terms of the DINOv3 License Agreement.
 
 import random
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
+import torch.nn.functional as F
+
+TARGET_SIZE = 224
+
+def _to_tensor_chw(x) -> torch.Tensor:
+    """
+    Convert x to a torch tensor in CHW format (C,H,W), float32.
+    Accepts: torch.Tensor (CHW/HWC), numpy arrays (HWC or HW), PIL images (handled by torchvision.ToTensor earlier).
+    """
+    if isinstance(x, torch.Tensor):
+        t = x
+    else:
+        t = torch.as_tensor(x)
+
+    # If HWC (3 dims and last dim small and not channels-first) -> convert
+    if t.ndim == 3:
+        # Heuristic: if last dim looks like channels (<=4) and first dims are large -> probably HWC
+        if t.shape[2] <= 4 and t.shape[0] > 4:
+            # HWC -> CHW
+            t = t.permute(2, 0, 1)
+        # else assume already CHW
+    elif t.ndim == 2:
+        # single channel HW -> add channel dim
+        t = t.unsqueeze(0)
+    elif t.ndim == 4:
+        # if somebody passed a batch tensor, take first element (shouldn't normally happen)
+        t = t[0]
+    else:
+        raise RuntimeError(f"Unsupported image tensor ndim={t.ndim}")
+
+    # ensure float32 for interpolation / processing
+    if not t.is_floating_point():
+        t = t.float()
+    else:
+        if t.dtype != torch.float32:
+            t = t.to(torch.float32)
+
+    return t.contiguous()
+
+
+def _normalize_channels(t: torch.Tensor) -> torch.Tensor:
+    """
+    Ensure 3 channels. If 1 -> repeat; if >3 -> take first 3.
+    Input expected CHW.
+    """
+    c, h, w = t.shape
+    if c == 1:
+        t = t.repeat(3, 1, 1)
+    elif c >= 3:
+        if c > 3:
+            t = t[:3, :, :]
+    else:
+        # shouldn't happen, but handle it
+        t = t.repeat(3 // c + 1, 1, 1)[:3, :, :]
+    return t
+
+
+def _stack_and_resize(tensors: Sequence, target_size: Optional[Union[int, Tuple[int, int]]] = None):
+    """
+    Given sequence of raw tensors/arrays, returns a stacked tensor shape (N, C, H, W).
+    If target_size is None -> compute max H,W among tensors and use that.
+    target_size can be int or (H,W).
+    """
+    proc = []
+    heights = []
+    widths = []
+    for x in tensors:
+        t = _to_tensor_chw(x)
+        t = _normalize_channels(t)
+        proc.append(t)
+        heights.append(t.shape[1])
+        widths.append(t.shape[2])
+
+    if target_size is None:
+        H = int(max(heights))
+        W = int(max(widths))
+    else:
+        if isinstance(target_size, int):
+            H = W = int(target_size)
+        else:
+            H, W = target_size
+
+    resized = []
+    for t in proc:
+        if t.shape[1] == H and t.shape[2] == W:
+            resized.append(t)
+        else:
+            t4 = t.unsqueeze(0)  # 1,C,H0,W0
+            # interpolate expects float tensors in BCHW
+            t_res = F.interpolate(t4, size=(H, W), mode="bilinear", align_corners=False)
+            resized.append(t_res.squeeze(0))
+    return torch.stack(resized, dim=0)  # N, C, H, W
 
 
 def collate_data_and_cast(
@@ -31,6 +124,12 @@ def collate_data_and_cast(
         )  # [n_global_crops, B, ...]
     else:
         collated_gram_teacher_crops = None
+
+    if "image" in samples_list[0][0]:
+        images = [s[0]["image"] for s in samples_list]
+        collate_images = _stack_and_resize(images, target_size=TARGET_SIZE)
+    else:
+        collate_images = None
 
     if local_batch_size is not None:
         # multi-distillation case, number of masks is different because the number of samples masked
@@ -67,6 +166,7 @@ def collate_data_and_cast(
     out = {
         "collated_global_crops": collated_global_crops.to(dtype),
         "collated_local_crops": collated_local_crops.to(dtype),
+        "collated_images": collate_images.to(dtype),
         "collated_masks": collated_masks,
         "mask_indices_list": mask_indices_list,
         "masks_weight": masks_weight,

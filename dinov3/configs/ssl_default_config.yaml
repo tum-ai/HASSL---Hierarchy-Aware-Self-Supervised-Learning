@@ -3,6 +3,11 @@ MODEL:
   DEVICE: cuda
   WEIGHTS: ''
   DTYPE: float32
+finetune:
+  path: '/home/students/code/helmholtzSS25/Hannes/dinov3playground/outputs-e80/ckpt/99999_keep'
+  lr: 1e-4
+  epochs: 20
+  weight_decay: 0.0
 compute_precision:
   param_dtype: bf16
   reduce_dtype: fp32
@@ -28,6 +33,20 @@ dino:
     peak: 0.5
     end: 0.5
     warmup_epochs: 0
+triplet:
+  enabled: true
+  cluster_backbone: student
+  margin: 2 #0.2
+  weight: 0.1
+  weight_scaling: global   # or 'local' or null
+  clustering_eps: 1e-6 # legacy key
+  weight_mode: weighted_mean
+  clustering_min_samples: 2
+  autoeps: true
+  autoeps_mode: "mean"    # "mean", "mean_minus_std", "mean_plus_std"
+  batch_hard: false       # legacy option when centroid=false
+  save_clustering: false
+  centroid: true                # if true, use centroid-based triplet
 ibot:
   loss_weight: 1.0
   mask_sample_probability: 0.5
@@ -182,6 +201,8 @@ checkpointing:
   period: 3750
   max_to_keep: 3
   keep_every: 99999999999999999  # Save a checkpoint every N iterations, regardless of max_to_keep and period
+  checkpointing_goal_epoch: 80
+
 
 # Example of constant schedules with schedules v2
 # # schedules:

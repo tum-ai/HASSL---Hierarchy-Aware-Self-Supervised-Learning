@@ -1,15 +1,11 @@
-# tested on RSC: /checkpoint/dino/qas/rope/vitl16_im1k/
-# gives 82.2 im1k-knn, 83.3 im1k-linear
-# runs with a total batch size of 2048 (64/gpu, 4 nodes here)
-# runs at 0.57s/iter
 MODEL:
   META_ARCHITECTURE: SSLMetaArch
   DEVICE: cuda
   WEIGHTS: ''
   DTYPE: float32
 finetune:
-  path: '/home/students/code/helmholtzSS25/Hannes/dinov3playground/outputs-e80/ckpt/99999_keep'
-  lr: 1e-4
+  path: /home/students/code/helmholtzSS25/Hannes/dinov3playground/outputs-e80/ckpt/99999_keep
+  lr: 0.0001
   epochs: 20
   weight_decay: 0.0
 compute_precision:
@@ -28,20 +24,29 @@ dino:
   koleo_loss_distributed: false
   koleo_topk: 1
   koleo_distributed_replicas: 0
+  koleo_distributed_loss_group_size: null
+  koleo_distributed_loss_group_data: true
   force_weight_norm: false
+  reweight_dino_local_loss: false
+  local_loss_weight_schedule:
+    start: 0.5
+    peak: 0.5
+    end: 0.5
+    warmup_epochs: 0
 triplet:
   enabled: true
   cluster_backbone: student
-  margin: 0.2
-  weight: 0.1
-  weight_scaling: global   # or 'local' or null
+  margin: 2 #0.2
+  weight: 1
+  weight_scaling: global
+  clustering_eps: 1.0e-06
   weight_mode: weighted_mean
   clustering_min_samples: 2
   autoeps: true
-  autoeps_mode: "mean"    # "mean", "mean_minus_std", "mean_plus_std"
-  batch_hard: false       # legacy option when centroid=false
+  autoeps_mode: mean
+  batch_hard: false
   save_clustering: false
-  centroid: true                # if true, use centroid-based triplet
+  centroid: true
 ibot:
   loss_weight: 1.0
   mask_sample_probability: 0.5
@@ -56,23 +61,45 @@ ibot:
   head_norm_last_layer: false
   head_nlayers: 3
   head_hidden_dim: 2048
+gram:
+  use_loss: false
+  compute_stats: false
+  loss_weight: 1.0
+  ema_teacher: false
+  ckpt: null
+  it_load_ema_teacher: -1
+  rep_update: true
+  update_frequency: 50000
+  it_first_update: 0
+  max_updates: null
+  normalized: true
+  img_level: false
+  remove_neg: false
+  remove_only_teacher_neg: false
+  tokens_used: all
+  global_teacher_resize_method: bicubic
+  global_teacher_resize_antialias: false
+  loss_weight_schedule: null
 train:
   batch_size_per_gpu: 128
-  dataset_path: ImageNet:split=TRAIN
-  output_dir: /checkpoint/dino/qas/rope/vitl16_im1k
+  dataset_path: NCells:root=/home/students/code/helmholtzSS25/Hannes/dinov3playground/manifest_train_fixed.csv.gz:split=TRAIN
+  data_config: null
+  output_dir: /home/students/code/helmholtzSS25/Hannes/dinov3playground/outputs-finetune-hdbscan2
   saveckp_freq: 20
   seed: 0
   num_workers: 19
   OFFICIAL_EPOCH_LENGTH: 1250
   monitor_gradient_norm: false
   chunk_schedule: []
-  cache_dataset: true
   use_teacher_head: true
   learn_from_teacher_tokens: false
   centering: sinkhorn_knopp
   checkpointing: false
+  checkpointing_full: false
   compile: false
   cudagraphs: false
+  sharded_eval_checkpoint: false
+  cache_dataset: true
   cell_augmentation: false
   cell_augmentation_type: hpa
 student:
@@ -80,7 +107,6 @@ student:
   patch_size: 16
   drop_path_rate: 0.3
   layerscale: 1.0e-05
-  patch_drop: 0.0
   pretrained_weights: ''
   ffn_layer: mlp
   ffn_ratio: 4.0
@@ -91,18 +117,21 @@ student:
   norm_layer: layernorm
   n_storage_tokens: 0
   mask_k_bias: false
+  untie_cls_and_patch_norms: false
+  untie_global_and_local_cls_norm: false
   in_chans: 3
   pos_embed_type: rope
   pos_embed_rope_base: 100.0
   pos_embed_rope_min_period: null
   pos_embed_rope_max_period: null
-  pos_embed_rope_normalize_coords: separate  # min, max, separate
+  pos_embed_rope_normalize_coords: separate
   pos_embed_rope_shift_coords: null
   pos_embed_rope_jitter_coords: null
   pos_embed_rope_rescale_coords: null
   pos_embed_rope_dtype: bf16
-  fp8_enabled: False  # Convert Linear layers to operate in fp8 precision
-  fp8_filter: "blocks"  # Regex that must appear in module path; empty means everything
+  fp8_enabled: false
+  fp8_filter: blocks
+  patch_drop: 0.0
 teacher:
   momentum_teacher: 0.992
   final_momentum_teacher: 1
@@ -127,6 +156,7 @@ optim:
   lr: 0.001
   warmup_epochs: 10
   min_lr: 1.0e-06
+  schedule_trunc_extra: 0.0
   clip_grad: 3.0
   freeze_last_layer_epochs: 1
   scaling_rule: sqrt_wrt_1024
@@ -147,9 +177,20 @@ crops:
   - 0.32
   global_crops_size: 224
   local_crops_size: 96
+  global_local_crop_pairs_ratios: 1.0
+  gram_teacher_crops_size: null
   localcrops_subset_of_globalcrops: false
   share_color_jitter: false
   horizontal_flips: true
+  gram_teacher_no_distortions: false
+  rgb_mean:
+  - 0.485
+  - 0.456
+  - 0.406
+  rgb_std:
+  - 0.229
+  - 0.224
+  - 0.225
 evaluation:
   eval_period_iterations: 12500
   low_freq_every: 5
@@ -159,4 +200,5 @@ evaluation:
 checkpointing:
   period: 3750
   max_to_keep: 3
+  keep_every: 99999999999999999
   checkpointing_goal_epoch: 80

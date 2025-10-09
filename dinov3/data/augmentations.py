@@ -215,11 +215,12 @@ class DataAugmentationDINO(object):
 
             output["local_crops"] = local_crops
             output["offsets"] = offsets
+            output["image"] = self.normalize(image)
         else:
             local_crops = [
                 self.local_transfo(self.geometric_augmentation_local(image)) for _ in range(self.local_crops_number)
             ]
             output["local_crops"] = local_crops
             output["offsets"] = ()
-
+            output["image"] = self.normalize(image)
         return output

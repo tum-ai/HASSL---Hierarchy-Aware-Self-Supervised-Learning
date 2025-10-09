@@ -1,6 +1,7 @@
 import numpy as np
 from collections import Counter
 from sklearn.neighbors import NearestNeighbors
+from typing import Sequence, Iterable
 
 
 def _ensure_numpy(emb):
@@ -8,13 +9,15 @@ def _ensure_numpy(emb):
         emb = np.asarray(emb)
     return emb
 
-def precision_at_k_from_labels(query_label, neighbor_labels, k):
-    neighbor_labels_k = neighbor_labels[:k]
-    return sum(1 for l in neighbor_labels_k if l == query_label) / k
 
-def average_precision_for_query(query_label, neighbor_labels):
+def precision_at_k_from_labels(query_label, neighbor_labels: Sequence, k: int) -> float:
+    neighbor_labels_k = neighbor_labels[:k]
+    return sum(1 for l in neighbor_labels_k if l == query_label) / float(k)
+
+
+def average_precision_for_query(query_label, neighbor_labels: Iterable) -> float:
     """
-    neighbor_labels: iterable of labels sorted by predicted relevance (descending)
+    neighbor_labels: iterable of labels sorted by predicted relevance (closest first)
     returns average precision (binary relevance: label==query_label)
     """
     hits = 0
@@ -27,72 +30,140 @@ def average_precision_for_query(query_label, neighbor_labels):
         return 0.0
     return sum_precisions / hits
 
-def compute_label_counts(labels):
-    cnt = Counter(labels)
-    return cnt  # mapping label -> count
 
-def evaluate_simple_knn(embeddings, labels, k_list=[1,5,10], metric='cosine', sample_size=None, random_state=0):
+def compute_label_counts(labels: Sequence) -> Counter:
+    return Counter(labels)
+
+
+def evaluate_simple_knn(embeddings,
+                        labels: Sequence,
+                        k_list=(1, 5, 10),
+                        metric='cosine',
+                        sample_size: int | None = None,
+                        random_state: int = 0):
     """
-    embeddings: np.ndarray (N, D)
-    labels: list/array length N
-    k_list: list of k values to compute metrics for
-    metric: 'cosine' (recommended) or 'euclidean'
-    sample_size: if not None -> randomly sample that many points for evaluation (both index and queries)
+    Compute k-NN retrieval metrics.
+
+    Returns dict mapping k -> {"topk_acc", "precision@k", "recall@k", "mAP"}.
+    mAP is computed using the ranked neighbor list truncated at max(k_list).
+    - embeddings: (N, D) array-like
+    - labels: sequence length N (can be ints, strings, etc.)
+    - k_list: iterable of k values
+    - metric: 'cosine' or 'euclidean'
+    - sample_size: optionally evaluate on a random subset (without replacement)
     """
     embeddings = _ensure_numpy(embeddings)
     N = embeddings.shape[0]
-    labels = np.array(labels)
+    if N == 0:
+        raise ValueError("Empty embeddings array")
+
+    # make labels an object array so sentinel values are easy to use
+    labels = np.asarray(labels, dtype=object)
     rng = np.random.default_rng(random_state)
 
-    # optionally sample a subset (sample without replacement)
+    # optional sampling
     if sample_size is not None and sample_size < N:
         idx = rng.choice(N, size=sample_size, replace=False)
         embeddings = embeddings[idx]
         labels = labels[idx]
         N = embeddings.shape[0]
 
-    # For cosine use normalized vectors with Euclidean NN:  cosine(a,b) = 1 - (a·b) if normalized, but sklearn supports metric='cosine'
+    # sanitize and sort k_list
+    k_list = sorted(int(k) for k in set(k_list))
+    max_k = max(k_list)
+    # can't ask for more neighbors than N-1 (excluding self)
+    max_k = min(max_k, max(0, N - 1))
+    if max_k == 0:
+        # trivial case: no neighbors to inspect
+        results = {}
+        for k in k_list:
+            results[k] = {"topk_acc": 0.0, "precision@k": 0.0, "recall@k": 0.0, "mAP": 0.0}
+        return results
+
+    # request one extra neighbor to allow removing self (we will request up to N neighbors including self)
+    n_neighbors_request = min(N, max_k + 1)
+
     if metric == 'cosine':
-        # sklearn's NearestNeighbors with metric='cosine' returns smaller distances for more similar vectors (cosine distance)
-        nn = NearestNeighbors(n_neighbors=max(k_list)+1, metric='cosine', n_jobs=-1)
+        nn = NearestNeighbors(n_neighbors=n_neighbors_request, metric='cosine', n_jobs=-1)
     else:
-        nn = NearestNeighbors(n_neighbors=max(k_list)+1, metric='euclidean', n_jobs=-1)
+        nn = NearestNeighbors(n_neighbors=n_neighbors_request, metric='euclidean', n_jobs=-1)
 
     nn.fit(embeddings)
-    
-    # kneighbors returns distances, indices
-    # we query all points (each point will return itself as the nearest -> exclude)
-    distances, indices = nn.kneighbors(embeddings, return_distance=True)
-    # remove self (first neighbor is usually itself at index 0)
-    indices = indices[:, 1:]  # shape (N, max_k)
-    
-    results = {}
-    max_k = max(k_list)
-    # precompute neighbor labels for each query
-    neighbor_labels_mat = labels[indices]  # shape (N, max_k)
-    
-    # compute counts per label for recall normalization
-    label_counts = compute_label_counts(labels)
-    
-    for k in k_list:
-        topk = neighbor_labels_mat[:, :k]
-        # top-1 accuracy (if k==1)
-        top1_acc = np.mean([1 if topk[i,0] == labels[i] else 0 for i in range(N)])
-        # precision@k
-        precs = [precision_at_k_from_labels(labels[i], topk[i], k) for i in range(N)]
-        precision_at_k = float(np.mean(precs))
-        # recall@k: (#relevant retrieved)/ (#relevant in dataset - 1) [exclude the query itself]
-        recalls = []
-        for i in range(N):
-            total_relevant = label_counts[labels[i]] - 1  # exclude query
-            if total_relevant <= 0:
-                recalls.append(0.0)
-            else:
-                recalls.append(sum(1 for l in topk[i] if l == labels[i]) / total_relevant)
-        recall_at_k = float(np.mean(recalls))
-        # mAP (average precision across queries)
-        aps = [average_precision_for_query(labels[i], list(neighbor_labels_mat[i])) for i in range(N)]
-        mAP = float(np.mean(aps))
-        results[k] = {"top1_acc": top1_acc, "precision@k": precision_at_k, "recall@k": recall_at_k, "mAP": mAP}
-    return results
+    distances, indices = nn.kneighbors(embeddings, return_distance=True)  # shape (N, n_neighbors_request)
 
+    # Build neighbor indices excluding self per-row. Pad with -1 sentinel if fewer than max_k neighbors remain.
+    sentinel = -1
+    neighbor_indices_no_self = np.full((N, max_k), sentinel, dtype=int)
+
+    for i in range(N):
+        row = indices[i].tolist()
+        # remove occurrences of self index (there may be duplicates or self not at position 0 in degenerate cases)
+        filtered = [x for x in row if x != i]
+        # take up to max_k neighbors
+        take = filtered[:max_k]
+        neighbor_indices_no_self[i, :len(take)] = take
+
+    # Build neighbor labels matrix (object dtype), missing neighbors = None
+    neighbor_labels_mat = np.empty((N, max_k), dtype=object)
+    neighbor_labels_mat[:, :] = None
+    for i in range(N):
+        for j in range(max_k):
+            idx = neighbor_indices_no_self[i, j]
+            if idx != sentinel:
+                neighbor_labels_mat[i, j] = labels[idx]
+            else:
+                neighbor_labels_mat[i, j] = None
+
+    # Precompute label counts for recall denominator (exclude query itself)
+    label_counts = compute_label_counts(labels)
+
+    # Precompute per-query AP using the truncated neighbor list (length max_k)
+    aps = [average_precision_for_query(labels[i], neighbor_labels_mat[i, :].tolist()) for i in range(N)]
+    global_mAP = float(np.mean(aps))
+
+    results = {}
+    for k in k_list:
+        if k <= 0:
+            results[k] = {"topk_acc": 0.0, "precision@k": 0.0, "recall@k": 0.0, "mAP": global_mAP}
+            continue
+        kk = min(k, max_k)
+        # top-k accuracy: fraction of queries where any of top-k neighbors has the same label
+        topk_hits = np.array([any(neighbor_labels_mat[i, :kk] == labels[i]) for i in range(N)], dtype=float)
+        topk_acc = float(topk_hits.mean())
+
+        # precision@k: average over queries of (# correct in top-k)/k
+        precs = []
+        for i in range(N):
+            topk_labels = neighbor_labels_mat[i, :kk]
+            num_correct = sum(1 for x in topk_labels if x == labels[i])
+            # note: we divide by requested k (not by available neighbors), staying consistent with precision@k definition
+            precs.append(num_correct / float(k))
+        precision_at_k = float(np.mean(precs))
+
+        # recall@k: average over queries that have at least one other item of same label (exclude queries
+        # where label_counts[label] == 1)
+        recalls = []
+        valid_mask = []
+        for i in range(N):
+            total_relevant = label_counts[labels[i]] - 1  # exclude the query itself
+            if total_relevant <= 0:
+                # skip this query from recall averaging
+                valid_mask.append(False)
+                continue
+            topk_labels = neighbor_labels_mat[i, :kk]
+            num_correct = sum(1 for x in topk_labels if x == labels[i])
+            recalls.append(num_correct / float(total_relevant))
+            valid_mask.append(True)
+        if len(recalls) == 0:
+            recall_at_k = 0.0
+        else:
+            recall_at_k = float(np.mean(recalls))
+
+        results[k] = {
+            "topk_acc": topk_acc,
+            "precision@k": precision_at_k,
+            "recall@k": recall_at_k,
+            "mAP": global_mAP,
+        }
+
+    return results
