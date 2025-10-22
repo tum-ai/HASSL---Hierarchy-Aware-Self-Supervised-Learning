@@ -464,7 +464,10 @@ class SSLMetaArch(nn.Module):
 
             # accumulate (weighted)
             # w = float(self.cfg.seg.loss_weight)
-            w = min(0.2, (iteration / 125000) * 0.2)
+            # w = min(0.1, (iteration / 125000) * 0.1)
+
+            
+            w = 0.05
             seg_extra_loss = w * (seg2seg + seg2img)
 
             # # log for visibility

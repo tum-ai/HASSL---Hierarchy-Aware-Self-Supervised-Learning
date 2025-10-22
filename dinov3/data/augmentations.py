@@ -240,6 +240,7 @@ class DataAugmentationDINO(object):
                            for _ in range(self.local_crops_number)]
         output["local_crops"] = local_crops_img
         output["offsets"] = ()
+        output["image"] = self.normalize(pil_img)
 
         # --- Segmentation crops (paired & no color jitter) ---
         if pil_seg is not None:

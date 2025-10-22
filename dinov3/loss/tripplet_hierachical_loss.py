@@ -205,7 +205,7 @@ class TripletHCentroidLoss(nn.Module):
             for i in range(pos_tensor.size(0)):
                 # scalar squared L2 to the i-th positive
                 d2 = (pos_tensor[i] - anchor).pow(2).sum()                        # scalar
-                positive_sum = positive_sum + d2 #* lambda_scaled[i]     NO LAMBDA          # stays scalar
+                positive_sum = positive_sum + d2 * lambda_scaled[i]#    NO LAMBDA          # stays scalar
 
             # --- NEGATIVE SUM (scalar) ---
             negative_sum = anchor.new_tensor(0.0, dtype=torch.float32)
@@ -213,7 +213,7 @@ class TripletHCentroidLoss(nn.Module):
                 # scalar L2 to the i-th negative (unit sphere: max dist ≈ 2)
                 d = (neg_tensor[i] - anchor).pow(2).sum().sqrt()                  # scalar
                 neg_term = (2 - d).clamp(min=0.0).pow(2) # scalar
-                negative_sum = negative_sum + neg_term #* neg_lambda_scaled[i])   NO LAMBDA                        # stays scalar
+                negative_sum = negative_sum + neg_term * neg_lambda_scaled[i]#)   NO LAMBDA                        # stays scalar
 
             '''
             # Normalize

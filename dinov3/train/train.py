@@ -633,6 +633,7 @@ def do_train(cfg, model, resume=False):
                 "triplet_loss": loss_dict["triplet_loss"],
                 "triplet/valid_anchors": loss_dict["triplet/valid_anchors"],
                 "triplet/anchor_grad_norm": _anchor_grad,
+                "metrics": loss_dict
 
             }, step=it)
             metric_logger.update(lr=lr)
