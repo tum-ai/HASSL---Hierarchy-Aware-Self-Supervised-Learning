@@ -93,6 +93,7 @@ class SSLMetaArch(nn.Module):
         teacher_model_dict["dino_head"] = dino_head_class()
         self.dino_loss = DINOLoss(self.dino_out_dim)
         if self.cfg.get("triplet", None) and self.cfg.triplet.enabled:
+            '''
             self.triplet_loss = TripletHCentroidLoss(
                 margin=self.cfg.triplet.get("margin", 0.2),
                 weighting_mode=self.cfg.triplet.get("weighting_mode", "weighted_mean"),
@@ -100,8 +101,10 @@ class SSLMetaArch(nn.Module):
                 negative_weighting="uniform",  # "uniform" | "inverse_pos" | "based_on_pos" (simple heuristics)
                 eps=1e-8,
             )
+
+            '''
             # self.triplet_centroid_loss = TripletCentroidLoss(self.cfg.triplet.get("margin", 0.2))
-            # self.triplet_loss = TripletLoss(self.cfg.triplet.get("margin", 0.2))
+            self.triplet_loss = TripletLoss(self.cfg.triplet.get("margin", 0.2))
         else:
             self.triplet_loss = None
 
@@ -467,7 +470,8 @@ class SSLMetaArch(nn.Module):
             # w = min(0.1, (iteration / 125000) * 0.1)
 
             
-            w = 0.05
+            # w = 0.05
+            w = max(0.0, 0.2 * (1 - iteration / 25000))
             seg_extra_loss = w * (seg2seg + seg2img)
 
             # # log for visibility
