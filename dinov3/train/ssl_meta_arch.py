@@ -104,7 +104,14 @@ class SSLMetaArch(nn.Module):
 
             '''
             # self.triplet_centroid_loss = TripletCentroidLoss(self.cfg.triplet.get("margin", 0.2))
-            self.triplet_loss = TripletLoss(self.cfg.triplet.get("margin", 0.2))
+            # self.triplet_loss = TripletLoss(self.cfg.triplet.get("margin", 0.2))
+            self.triplet_loss = TripletHCentroidLoss(
+                margin=self.cfg.triplet.get("margin", 0.2),
+                weighting_mode=self.cfg.triplet.get("weighting_mode", "weighted_mean"),
+                lambda_scaling=self.cfg.triplet.get("lambda_scaling", "global"),   # "global" | "local" | None
+                negative_weighting=self.cfg.triplet.get("negative_weighting", "uniform"),
+                eps=1e-8,
+            )
         else:
             self.triplet_loss = None
 
@@ -471,7 +478,8 @@ class SSLMetaArch(nn.Module):
 
             
             # w = 0.05
-            w = max(0.0, 0.2 * (1 - iteration / 25000))
+            # w = max(0.0, 0.2 * (1 - iteration / 25000))
+            w = min(0.2, (iteration / 125000) * 0.2)
             seg_extra_loss = w * (seg2seg + seg2img)
 
             # # log for visibility

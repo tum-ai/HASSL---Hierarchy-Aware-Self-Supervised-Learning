@@ -46,7 +46,7 @@ from dinov3.train.ssl_meta_arch import SSLMetaArch
 assert torch.__version__ >= (2, 1)
 torch.backends.cuda.matmul.allow_tf32 = True  # pytorch 1.12 sets this to false by default
 torch.backends.cudnn.benchmark = False  # True
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 logger = logging.getLogger("dinov3")

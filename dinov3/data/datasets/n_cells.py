@@ -21,7 +21,7 @@ _ALL_DATASETS = [
     "N_CMP_15_17_and_TNBC","N_CoNIC","N_CryoNuSeg","N_DynamicNuclearNet",
     "N_IHC_TMA","N_MoNuSAC","N_MoNuSeg","N_Neurips","N_NuInsSeg","N_PanNuke",
     "N_Phenoplex","N_cyto2","N_databowl","N_iPSC_Morpologies","N_iPSC_QCData",
-    "N_lynsec13","N_omnipose","N_tissuenet","N_yeaz","N_Helmholtz",
+    "N_lynsec13","N_omnipose","N_tissuenet","N_yeaz","N_Helmholtz", "pertubation"
 ]
 
 _PER_DATASET_LIMITS = {k: -1 for k in _ALL_DATASETS}
