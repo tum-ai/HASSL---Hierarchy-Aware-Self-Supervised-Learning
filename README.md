@@ -76,15 +76,17 @@ export WANDB_TAGS="dinov3,hdbscan,finetuning"   # optional
 
 Create a `manifest_train.csv.gz` file with the following columns:
 
-| Column      | Description                     |
-|-------------|---------------------------------|
-| `img_path`  | Path to the cell image          |
-| `mask_dir`  | Path to the corresponding mask  |
-| `origin`    | Dataset label                   |
-| `stem`      | Unique id for each row                  |
-| `h`         | Height of the image in pixels   |
-| `w`         | Width of the image in pixels    |
-| `area`         | Area of the image in pixels     |
+| Column       | Description                                       |
+|--------------|---------------------------------------------------|
+| `img_path`   | Absolute path to the cell image (`.npy`)          |
+| `origin`     | Source dataset name (e.g. `N_PanNuke`)            |
+| `label`      | Cell type or class label                          |
+| `mask_dir`   | Directory containing the corresponding mask file  |
+| `has_empty`  | `1` if an empty-mask variant exists, else `0`     |
+| `stem`       | Filename stem (no extension)                      |
+| `h`          | Height of the image in pixels                     |
+| `w`          | Width of the image in pixels                      |
+| `area`       | Area of the image in pixels (`h × w`)             |
 
 Reference manifests are provided at `manifest_train_fixed.csv.gz` and `manifest_test_fixed.csv.gz`.
 
@@ -107,7 +109,7 @@ PYTHONPATH=${PWD} python -m dinov3.run.submit dinov3/train/train.py \
   --output-dir <PATH/TO/OUTPUT/DIR> \
   train.dataset_path=NCells:root=/<PATH/TO/CSV.GZ>:split=TRAIN \
   finetune.path='' \
-  tiplet.enable=true:weight_scaling=global \
+  triplet.enable=true:weight_scaling=global \
   checkpointing.checkpointing_goal_epoch=40
 ```
 
@@ -124,7 +126,7 @@ PYTHONPATH=${PWD} python -m dinov3.run.submit dinov3/train/train.py \
   --output-dir <PATH/TO/OUTPUT/DIR> \
   train.dataset_path=NCells:root=/<PATH/TO/CSV.GZ>:split=TRAIN \
   finetune.path='<PATH/TO/CHECKPOINT>' \
-  tiplet.enable=true:weight_scaling=global \
+  triplet.enable=true:weight_scaling=global \
   checkpointing.checkpointing_goal_epoch=40
 ```
 
