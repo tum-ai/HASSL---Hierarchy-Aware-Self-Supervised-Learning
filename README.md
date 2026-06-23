@@ -210,7 +210,3 @@ We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating, you agree to uphold these standards.
 
 ---
-
-## Citing This Work
-
-If you find this repository useful, please consider giving a star :star: and citing our paper:
