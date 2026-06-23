@@ -145,10 +145,10 @@ The manifest is a gzip-compressed CSV with the following schema:
 
 ### Step 3 — Register Cell Classes
 
-Add your cell class name to:
+Add your cell origin names from the manifest file to:
 
 ```
-dinov3/data/datasets/n_cells.py  (line 25)
+dinov3/data/datasets/n_cells.py  (line 27)
 ```
 
 ### Step 4 — Launch Training
