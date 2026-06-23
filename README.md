@@ -1,16 +1,28 @@
-# Hierarchy-Aware Self-Supervised Learning for Biological Cell Images
+# HASSL: Hierarchy-Aware Self-Supervised Learning Framework for Single Cell Microscopy
 
 [ :scroll: [`Paper`](#)] [ :book: [`BibTeX`](#citing-this-work)]
 
-Self-supervised vision models applied to biological cell images suffer from a systematic failure mode: coarse imaging factors (e.g., acquisition modality, staining protocol) dominate the learned representation, overwhelming the fine morphological signals that distinguish biologically distinct cell subtypes. The result is a latent space where semantically different cells appear identical and hierarchically related subtypes collapse into the same cluster.
+Biological cell images present a distinct challenge for self-supervised learning: coarse imaging factors (acquisition modality, staining protocol) systematically dominate the learned representation, overwhelming the fine morphological signals that distinguish biologically distinct subtypes. The result is a latent space where semantically different cells appear identical and hierarchically related subtypes collapse into the same cluster.
 
-We introduce a **hierarchy-aware self-supervised training framework** built on top of DINOv3 that directly counteracts this tendency via two tightly integrated components:
+We propose **HASSL**, a hierarchy-aware self-supervised training framework built on top of DINOv3 that directly counteracts this tendency via two tightly integrated components:
 
-1. **Double-Teacher Distillation** — A segmentation teacher is incorporated alongside the standard self-supervised teacher. By supervising patch-level features with segmentation priors, the student network learns morphologically aware representations that are sensitive to cell shape and boundary structure rather than imaging modality alone.
+1. **Double-Teacher Distillation** — A segmentation teacher is incorporated alongside the standard EMA image teacher. Pre-computed zero-shot segmentation masks (CellposeSAM) provide structure-aware supervision that biases the student away from modality cues and toward cell morphology, initiating the emergence of morphology-based subclusters.
 
-2. **HDBSCAN Contrastive Loss** — At each training step, HDBSCAN is run on the current embedding space to discover the latent cluster hierarchy. A contrastive loss is then derived from this hierarchy, penalizing embeddings that violate hierarchical separation at any granularity. This steers the model toward decision boundaries that respect biological subtypes at multiple levels of specificity.
+2. **Hierarchy-Aware Contrastive Loss** — At each training step, HDBSCAN is run on the current batch embeddings to obtain a condensed cluster tree. For each anchor, stability-weighted (λ) positive and negative prototypes are mined at every level of the hierarchy. The resulting hinge-contrastive loss pulls each cell toward its ancestor cluster centroids while repelling cells from different subtypes at each hierarchical level.
 
-Together, these two components push the embedding space toward a structure that is simultaneously morphologically grounded and hierarchically consistent — enabling meaningful sub-cluster discovery driven by fine morphological detail rather than confounded by acquisition artifacts.
+Together, these two components push the embedding space toward a structure that is simultaneously morphologically grounded and hierarchically consistent. We train and evaluate on a curated corpus of **2.3M single cells** aggregated from **20 microscopy datasets** covering **208 cell classes**, achieving +2.8% average top-K accuracy, +6.3% top-9 retrieval on the deep-hierarchy benchmark, and +7.8% F1-score on drug perturbation classification over state-of-the-art SSL baselines.
+
+<p align="center">
+  <img src="assets/fig1.png" width="90%" alt="Figure 1: Hierarchy in cell imaging and HASSL embedding objective"/>
+  <br>
+  <em>Figure 1: Hierarchy in cell imaging (left) and the embedding objective with HASSL (right). HASSL learns a more hierarchical embedding space, leading to improved morphological representation and tighter subclusters.</em>
+</p>
+
+<p align="center">
+  <img src="assets/fig2.png" width="90%" alt="Figure 2: HASSL training pipeline overview"/>
+  <br>
+  <em>Figure 2: Overview of the HASSL training pipeline. (1) Zero-shot segmentation maps are generated per cell. (2) A student ViT is trained via double-teacher distillation from a global image teacher and a segmentation teacher. (3) HDBSCAN derives a cluster hierarchy from batch embeddings; stability-λ-weighted prototypes define positive and negative pairs. (4) The resulting latent space organises cells into superclusters with clearer morphology-driven subclusters.</em>
+</p>
 
 ---
 
@@ -45,8 +57,8 @@ Together, these two components push the embedding space toward a structure that 
 The training and evaluation code requires PyTorch and a [Weights & Biases](https://wandb.ai/) account for experiment tracking. Clone the repository and create the conda environment:
 
 ```shell
-micromamba env create -f conda.yaml
-micromamba activate dinov3
+conda env create -f conda.yaml
+conda activate dinov3
 ```
 
 ---
@@ -202,12 +214,3 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By particip
 ## Citing This Work
 
 If you find this repository useful, please consider giving a star :star: and citing our paper:
-
-```bibtex
-@inproceedings{,
-  title     = {Hierarchy-Aware Self-Supervised Learning for Biological Cell Images},
-  author    = {},
-  booktitle = {},
-  year      = {2026},
-}
-```
