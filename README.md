@@ -1,4 +1,9 @@
 # HASSL: Hierarchy-Aware Self-Supervised Learning Framework for Single Cell Microscopy
+<p align="center">
+  <img src="assets/fig1.png" width="100%" alt="Figure 1: Hierarchy in cell imaging and HASSL embedding objective"/>
+  <br>
+  <em>Figure 1: Hierarchy in cell imaging (left) and the embedding objective with HASSL (right). HASSL learns a more hierarchical embedding space, leading to improved morphological representation and tighter subclusters.</em>
+</p>
 
 [ :scroll: [`Paper`](#)] [ :book: [`BibTeX`](#citing-this-work)]
 
@@ -12,11 +17,6 @@ We propose **HASSL**, a hierarchy-aware self-supervised training framework built
 
 Together, these two components push the embedding space toward a structure that is simultaneously morphologically grounded and hierarchically consistent. We train and evaluate on a curated corpus of **2.3M single cells** aggregated from **20 microscopy datasets** covering **208 cell classes**, achieving +2.8% average top-K accuracy, +6.3% top-9 retrieval on the deep-hierarchy benchmark, and +7.8% F1-score on drug perturbation classification over state-of-the-art SSL baselines.
 
-<p align="center">
-  <img src="assets/fig1.png" width="90%" alt="Figure 1: Hierarchy in cell imaging and HASSL embedding objective"/>
-  <br>
-  <em>Figure 1: Hierarchy in cell imaging (left) and the embedding objective with HASSL (right). HASSL learns a more hierarchical embedding space, leading to improved morphological representation and tighter subclusters.</em>
-</p>
 
 <p align="center">
   <img src="assets/fig2.png" width="90%" alt="Figure 2: HASSL training pipeline overview"/>
