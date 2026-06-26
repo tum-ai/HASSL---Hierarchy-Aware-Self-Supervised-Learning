@@ -37,8 +37,21 @@
     .hero {
       background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
       color: #fff;
-      padding: 72px 24px 56px;
+      padding: 72px 24px 48px;
       text-align: center;
+    }
+    .hero .venue-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #c4b5fd;
+      margin-bottom: 24px;
     }
     .hero h1 {
       font-size: clamp(22px, 4vw, 36px);
@@ -60,6 +73,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 12px;
+      margin-bottom: 40px;
     }
     .btn {
       display: inline-flex;
@@ -76,6 +90,79 @@
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.35); color: #e2e8f0; }
     .btn svg { width: 16px; height: 16px; }
+
+    /* ── Authors ───────────────────────────────────────────────────────── */
+    .authors-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    .authors-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px 20px;
+      margin-bottom: 12px;
+    }
+    .author {
+      font-size: 14px;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+    .author a {
+      color: #c4b5fd;
+      text-decoration: none;
+    }
+    .author a:hover {
+      text-decoration: underline;
+      color: #a78bfa;
+    }
+    .author .equal {
+      color: #fbbf24;
+      font-size: 12px;
+      vertical-align: super;
+    }
+    .author .affil-num {
+      color: #94a3b8;
+      font-size: 11px;
+      vertical-align: super;
+    }
+    .equal-note {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+    .affiliations {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.8;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .affiliations sup {
+      color: #818cf8;
+      font-weight: 600;
+      margin-right: 2px;
+    }
+
+    /* ── Logos ─────────────────────────────────────────────────────────── */
+    .logos-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 32px;
+      padding: 32px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+    }
+    .logos-bar img {
+      height: 40px;
+      opacity: 0.85;
+      transition: opacity .2s;
+    }
+    .logos-bar img:hover { opacity: 1; }
 
     /* ── Layout ────────────────────────────────────────────────────────── */
     .container {
@@ -130,8 +217,7 @@
     .fig-block { margin: 28px 0; }
     .fig-block img {
       width: 100%;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
+      border: none;
       display: block;
     }
     .fig-caption {
@@ -277,6 +363,10 @@
 
 <!-- ─── Hero ─────────────────────────────────────────────────────────────── -->
 <div class="hero">
+  <div class="venue-badge">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    ECCV 2026
+  </div>
   <h1><span>HASSL:</span> Hierarchy-Aware Self-Supervised Learning<br>Framework for Single Cell Microscopy</h1>
   <p class="subtitle">
     Learning morphologically grounded, hierarchically consistent cell embeddings — without any labels.
@@ -286,12 +376,12 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       Paper
     </a>
-    <a href="https://github.com/YOUR_ORG/hassl" class="btn btn-outline">
+    <a href="https://github.com/tum-ai/HASSL" class="btn btn-outline">
       <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       Code
     </a>
     <a href="#" class="btn btn-outline">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4s8 1.79 8 4"/></svg>
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
       Dataset
     </a>
     <a href="#bibtex" class="btn btn-outline">
@@ -299,69 +389,67 @@
       BibTeX
     </a>
   </div>
-</div>
 
-<!-- ─── Stats ──────────────────────────────────────────────────────────────── -->
-<div class="container">
-  <div class="stats">
-    <div class="stat"><div class="value">2.3M</div><div class="label">Single cell crops</div></div>
-    <div class="stat"><div class="value">20</div><div class="label">Microscopy datasets</div></div>
-    <div class="stat"><div class="value">208</div><div class="label">Cell classes</div></div>
-    <div class="stat"><div class="value">8</div><div class="label">Imaging modalities</div></div>
-  </div>
-</div>
-
-<!-- ─── Abstract ─────────────────────────────────────────────────────────── -->
-<section>
-  <div class="container">
-    <h2>Abstract</h2>
-    <p>
-      Hierarchical structure is common in image data, where fine-grained clusters often merge into larger,
-      coarser semantic clusters. In biological cell images, current self-supervised learning models tend to
-      suppress the inherent hierarchical structure, as coarse factors (such as the imaging modality)
-      systematically obscure finer attributes (e.g., morphological details) in the latent space.
-    </p>
-    <p>
-      We propose a novel <strong>hierarchy-aware self-supervised training framework</strong> to address this problem.
-      Our method integrates two components: (i) a <strong>double-teacher distillation framework</strong> that
-      introduces a segmentation teacher to improve the latent space's morphological awareness, and
-      (ii) a <strong>hierarchy-aware contrastive loss</strong> based on HDBSCAN to improve decision boundaries
-      between closely related yet distinct subtypes at each hierarchical level.
-    </p>
-    <p>
-      Both components counteract the self-supervised learning tendency to overemphasize coarse factors by
-      aligning embeddings with semantic and morphological cues, yielding biologically meaningful sub-clusters
-      driven by fine morphological detail. We train and evaluate on our curated corpus of 2.3M single cells
-      from 20 microscopy datasets covering 208 cell classes.
-    </p>
-
-    <div class="result-chips">
-      <div class="chip"><span>+2.8%</span> Avg. top-K accuracy</div>
-      <div class="chip"><span>+6.3%</span> Top-9 retrieval (deep hierarchy)</div>
-      <div class="chip"><span>+7.8%</span> F1 on drug perturbation</div>
-      <div class="chip"><span>+2.3%</span> VRAM overhead vs. DINOv3</div>
+  <!-- ─── Authors ───────────────────────────────────────────────────── -->
+  <div class="authors-section">
+    <div class="authors-grid">
+      <div class="author"><a href="https://openreview.net/profile?id=~Julius_Riel1">Julius Riel</a><span class="equal">&dagger;</span><span class="affil-num">1,2,3</span></div>
+      <div class="author"><a href="https://scholar.google.com/citations?user=u5iBnt0AAAAJ&hl=en">Vishwa Mohan Singh</a><span class="equal">&dagger;</span><span class="affil-num">1,2</span></div>
+      <div class="author"><a href="https://scholar.google.com/citations?user=5ZMf2cYAAAAJ&hl=en">Sai Anirudh Aryasomayajula</a><span class="affil-num">1,2</span></div>
+      <div class="author">Anuun Chinbat<span class="affil-num">1</span></div>
+      <div class="author">Hannes Leonhard<span class="affil-num">1,3</span></div>
+      <div class="author">Moritz Ladenburger<span class="affil-num">1,3</span></div>
+      <div class="author">Frederik Alexander<span class="affil-num">1,3</span></div>
+      <div class="author">Vishisht Choudhary<span class="affil-num">1,3</span></div>
+      <div class="author">Fabio Laredo<span class="affil-num">4</span></div>
+      <div class="author"><a href="https://orcid.org/0000-0003-3621-3481">Giacomo Masserdotti</a><span class="affil-num">4</span></div>
+      <div class="author"><a href="https://scholar.google.com/citations?user=qbX8sKwAAAAJ&hl=en">Thorben Prein</a><span class="affil-num">1,3</span></div>
+      <div class="author"><a href="https://scholar.google.com/citations?user=Wg9zjqEAAAAJ&hl=en">Carsten Marr</a><span class="affil-num">5,6,7,8,9</span></div>
+      <div class="author"><a href="https://scholar.google.com/citations?user=55umfgIAAAAJ&hl=en">Amirhossein Kardoost</a><span class="affil-num">5</span></div>
+    </div>
+    <p class="equal-note"><span style="color:#fbbf24;">&dagger;</span> Equal contribution</p>
+    <div class="affiliations">
+      <sup>1</sup>TUM.ai, Munich &nbsp;
+      <sup>2</sup>Ludwig Maximilian University, Munich &nbsp;
+      <sup>3</sup>Technical University of Munich &nbsp;
+      <sup>4</sup>Institute of Stem Cell Research, Helmholtz Center Munich &nbsp;
+      <sup>5</sup>Institute of AI for Health, Helmholtz Munich &nbsp;
+      <sup>6</sup>Dept. of Medicine III, LMU Hospital &nbsp;
+      <sup>7</sup>Dept. of Physics, LMU &nbsp;
+      <sup>8</sup>German Cancer Consortium (DKTK) &nbsp;
+      <sup>9</sup>Munich Center for Machine Learning (MCML)
     </div>
   </div>
-</section>
+</div>
 
-<!-- ─── Figure 1 ───────────────────────────────────────────────────────────── -->
+<!-- ─── Logos ──────────────────────────────────────────────────────────────── -->
+<div class="logos-bar">
+  <img src="logos/tumai.png" alt="TUM.ai" />
+  <img src="logos/helmholtz.png" alt="Helmholtz Munich" />
+  <img src="logos/lmu.png" alt="LMU Munich" />
+  <img src="logos/tum.svg" alt="Technical University of Munich" />
+  <img src="logos/mcml.jpg" alt="MCML" />
+</div>
+
+
+<!-- ─── Motivation ─────────────────────────────────────────────────────────── -->
 <section>
   <div class="container">
     <h2>Motivation</h2>
-    <p>
-      Different cell types can appear indistinguishable under the same imaging modality, while the same
-      cell type can look markedly different across modalities. Standard SSL models pick up on modality
-      as the dominant cue, forming coarse "superclusters" that obscure biologically meaningful substructure.
-      HASSL pushes the model to form a latent space where cells are organised by morphology first.
-    </p>
     <div class="fig-block">
-      <img src="../assets/fig1.png" alt="Hierarchy in cell imaging and HASSL embedding objective" loading="lazy" />
+      <img src="assets/fig1.png" alt="Hierarchy in cell imaging and HASSL embedding objective" loading="lazy" />
       <p class="fig-caption">
         <strong>Figure 1.</strong> Hierarchy in cell imaging (left) and the HASSL embedding objective (right).
         HASSL learns a more hierarchical embedding space, leading to improved morphological representation
         and tighter subclusters — separating OPCs from neurons even within the same imaging modality.
       </p>
     </div>
+    <p>
+      Different cell types can appear indistinguishable under the same imaging modality, while the same
+      cell type can look markedly different across modalities. Standard SSL models pick up on modality
+      as the dominant cue, forming coarse "superclusters" that obscure biologically meaningful substructure.
+      HASSL pushes the model to form a latent space where cells are organised by morphology first.
+    </p>
   </div>
 </section>
 
@@ -401,7 +489,7 @@
     </div>
 
     <div class="fig-block" style="margin-top: 32px;">
-      <img src="../assets/fig2.png" alt="HASSL training pipeline overview" loading="lazy" />
+      <img src="assets/fig2.png" alt="HASSL training pipeline overview" loading="lazy" />
       <p class="fig-caption">
         <strong>Figure 2.</strong> Overview of the HASSL training pipeline.
         <strong>(1)</strong> Zero-shot segmentation maps are generated per cell.
@@ -412,6 +500,23 @@
         <strong>(4)</strong> The resulting latent space organises cells into superclusters with clearer
         morphology-driven subclusters (astrocytes, neurons, OPCs, dead cells).
       </p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Dataset ──────────────────────────────────────────────────────────── -->
+<section>
+  <div class="container">
+    <h2>Dataset</h2>
+    <p>
+      We curate a large-scale single-cell microscopy corpus spanning diverse imaging modalities,
+      cell types, and biological contexts to train and evaluate hierarchy-aware representations.
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="value">2.3M</div><div class="label">Single cell crops</div></div>
+      <div class="stat"><div class="value">20</div><div class="label">Microscopy datasets</div></div>
+      <div class="stat"><div class="value">208</div><div class="label">Cell classes</div></div>
+      <div class="stat"><div class="value">8</div><div class="label">Imaging modalities</div></div>
     </div>
   </div>
 </section>
@@ -464,7 +569,7 @@
 
     <!-- Fig 3: t-SNE -->
     <div class="fig-block">
-      <img src="../assets/fig3.png" alt="t-SNE latent space visualization" loading="lazy" />
+      <img src="assets/fig3.png" alt="t-SNE latent space visualization" loading="lazy" />
       <p class="fig-caption">
         <strong>Figure 3.</strong> Latent space visualization on the test set (t-SNE, dim=2).
         In the internal stem cell data (orange), double-teacher distillation brings superclusters of
@@ -474,7 +579,7 @@
 
     <!-- Fig 4: hierarchy ablation -->
     <div class="fig-block">
-      <img src="../assets/fig4.png" alt="Top-k retrieval on flat vs deep hierarchy datasets" loading="lazy" />
+      <img src="assets/fig4.png" alt="Top-k retrieval on flat vs deep hierarchy datasets" loading="lazy" />
       <p class="fig-caption">
         <strong>Figure 4.</strong> Top-k retrieval on flat (depth=1, left) vs. deep hierarchy (depth&gt;1, right)
         dataset subsets. HASSL improves by <strong>+6.3%</strong> at K=9 on multi-level hierarchy datasets
@@ -551,7 +656,7 @@
 
 <!-- ─── Footer ────────────────────────────────────────────────────────────── -->
 <footer>
-  <p>HASSL · ECCV 2026 · Code on <a href="https://github.com/YOUR_ORG/hassl">GitHub</a></p>
+  <p>HASSL · ECCV 2026 · Code on <a href="https://github.com/tum-ai/HASSL">GitHub</a></p>
   <p style="margin-top:6px;">Built on top of <a href="https://github.com/facebookresearch/dinov2">DINOv3</a> · Dataset to be released on HuggingFace after review</p>
 </footer>
 
