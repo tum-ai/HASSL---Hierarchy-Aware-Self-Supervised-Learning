@@ -67,7 +67,7 @@ We provide pre-built manifests for our training and evaluation sets. Download th
 
 | File | Description | Download |
 |------|-------------|----------|
-| Cell image dataset | All `.npy` cell images used for training and evaluation | [link] |
+| Cell image dataset | All `.npy` cell images used for training and evaluation | [link](https://huggingface.co/datasets/tum-ai/HASSL-SingleCellBench) |
 | `manifest_train_fixed.csv.gz` | Training manifest (included in repo) | — |
 | `manifest_test_fixed.csv.gz` | Evaluation manifest (included in repo) | — |
 
